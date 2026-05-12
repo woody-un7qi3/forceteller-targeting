@@ -185,25 +185,345 @@ if (result.matched()) { ... }
 
 ---
 
-## JSON 룰 예시
+## JSON 룰 예시 모음
+
+어드민에서 룰 작성 시 참고용. 모든 예시는 `RuleJsonMapper.fromJson(json)` 으로 그대로 파싱됩니다.
+
+### 노드 종류
+
+| 타입 | 의미 | 자식 필드 |
+|---|---|---|
+| `compare` | 속성 비교 (잎 노드) | `attribute`, `operator`, `value` |
+| `and` | 모두 참이어야 참 | `children: [...]` |
+| `or` | 하나라도 참이면 참 | `children: [...]` |
+| `not` | 자식 결과 부정 | `child: {...}` |
+
+### 연산자 표
+
+| 연산자 | 의미 | 적용 타입 | value 형태 |
+|---|---|---|---|
+| `EQ` | 같음 | 모든 타입 | 스칼라 |
+| `NEQ` | 다름 | 모든 타입 | 스칼라 |
+| `GT` / `GTE` | 초과 / 이상 | INTEGER, INSTANT | 스칼라 |
+| `LT` / `LTE` | 미만 / 이하 | INTEGER, INSTANT | 스칼라 |
+| `BETWEEN` | 범위 (양 끝 포함) | INTEGER, INSTANT | `[min, max]` 배열 |
+| `IN` | 목록에 포함 | STRING, INTEGER | 배열 |
+| `NOT_IN` | 목록에 미포함 | STRING, INTEGER | 배열 |
+| `CONTAINS` | 리스트 속성이 값을 포함 | LIST_STRING | 스칼라 |
+
+---
+
+### 1. 단일 조건 — 30세 이상 사용자
 
 ```json
 {
-  "id": 42,
-  "version": 1,
+  "id": 1, "version": 1,
+  "root": {
+    "type": "compare", "id": "c1",
+    "attribute": "user.age", "operator": "GTE", "value": 30
+  }
+}
+```
+
+### 2. AND 조합 — 여성, 20-39세, 안드로이드, 저녁 시간
+
+```json
+{
+  "id": 2, "version": 1,
   "root": {
     "type": "and",
     "children": [
-      { "type": "compare", "attribute": "user.gender",     "operator": "EQ",      "value": "F" },
-      { "type": "compare", "attribute": "user.age",        "operator": "BETWEEN", "value": [20, 39] },
-      { "type": "compare", "attribute": "device.platform", "operator": "EQ",      "value": "android" },
-      { "type": "compare", "attribute": "now.kstHour",     "operator": "GTE",     "value": 18 }
+      { "type": "compare", "id": "c1", "attribute": "user.gender",     "operator": "EQ",      "value": "F" },
+      { "type": "compare", "id": "c2", "attribute": "user.age",        "operator": "BETWEEN", "value": [20, 39] },
+      { "type": "compare", "id": "c3", "attribute": "device.platform", "operator": "EQ",      "value": "android" },
+      { "type": "compare", "id": "c4", "attribute": "now.kstHour",     "operator": "GTE",     "value": 18 }
     ]
   }
 }
 ```
 
-`RuleJsonMapper.fromJson(json)` 으로 `Rule` 인스턴스 생성, 그대로 `evaluate()`에 전달.
+### 3. OR 조합 — 모바일 사용자 (안드로이드 OR iOS)
+
+```json
+{
+  "id": 3, "version": 1,
+  "root": {
+    "type": "or",
+    "children": [
+      { "type": "compare", "id": "c1", "attribute": "device.platform", "operator": "EQ", "value": "android" },
+      { "type": "compare", "id": "c2", "attribute": "device.platform", "operator": "EQ", "value": "ios" }
+    ]
+  }
+}
+```
+
+`IN` 연산자로 단축 가능:
+
+```json
+{
+  "type": "compare", "attribute": "device.platform", "operator": "IN", "value": ["android", "ios"]
+}
+```
+
+### 4. NOT — 게스트 제외
+
+```json
+{
+  "id": 4, "version": 1,
+  "root": {
+    "type": "not",
+    "child": {
+      "type": "compare", "attribute": "user.isGuest", "operator": "EQ", "value": true
+    }
+  }
+}
+```
+
+### 5. 중첩 — (저녁시간 OR 주말) AND 결제 이력 있음
+
+```json
+{
+  "id": 5, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      {
+        "type": "or",
+        "children": [
+          { "type": "compare", "attribute": "now.kstHour",    "operator": "GTE", "value": 18 },
+          { "type": "compare", "attribute": "now.dayOfWeek",  "operator": "IN",  "value": [6, 7] }
+        ]
+      },
+      { "type": "compare", "attribute": "action.hasCharged", "operator": "EQ", "value": true }
+    ]
+  }
+}
+```
+
+### 6. 신규 가입 사용자 — 가입 7일 이내, 미결제
+
+```json
+{
+  "id": 6, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "user.daysAfterSignup", "operator": "LTE", "value": 7 },
+      { "type": "compare", "attribute": "action.hasCharged",    "operator": "EQ",  "value": false }
+    ]
+  },
+  "meta": { "label": "신규 가입 + 미결제 (첫 결제 유도)" }
+}
+```
+
+### 7. 휴면 복귀 캠페인 — 30일 무로그인 + 결제 이력
+
+```json
+{
+  "id": 7, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "event.lastLoginDaysAgo", "operator": "GTE", "value": 30 },
+      { "type": "compare", "attribute": "action.hasCharged",      "operator": "EQ",  "value": true }
+    ]
+  },
+  "meta": { "label": "휴면 결제 유저 복귀 캠페인" }
+}
+```
+
+### 8. 어드민/게스트 제외, 비로그인 제외
+
+```json
+{
+  "id": 8, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "user.isAnonymous", "operator": "EQ", "value": false },
+      { "type": "compare", "attribute": "user.isAdmin",     "operator": "EQ", "value": false },
+      { "type": "compare", "attribute": "user.isGuest",     "operator": "EQ", "value": false }
+    ]
+  }
+}
+```
+
+### 9. 앱 버전 조건 — 3.5.0 이상 안드로이드
+
+`device.appVersionInt`는 `(major<<16) + (minor<<8) + patch` 정수 표현.
+
+- 3.5.0 = `(3<<16) + (5<<8) + 0 = 197376`
+
+```json
+{
+  "id": 9, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "device.platform",      "operator": "EQ",  "value": "android" },
+      { "type": "compare", "attribute": "device.appVersionInt", "operator": "GTE", "value": 197376 }
+    ]
+  }
+}
+```
+
+### 10. 다중 국가 제외 — 한국/일본만 허용
+
+```json
+{
+  "id": 10, "version": 1,
+  "root": {
+    "type": "compare",
+    "attribute": "device.platform",
+    "operator": "IN",
+    "value": ["android", "ios"]
+  }
+}
+```
+
+`NOT_IN`로 반대 표현:
+
+```json
+{
+  "type": "compare", "attribute": "device.store", "operator": "NOT_IN", "value": ["onestore", "web"]
+}
+```
+
+### 11. LIST_STRING 속성 사용 — 특정 운세 태그 열람 사용자
+
+```json
+{
+  "id": 11, "version": 1,
+  "root": {
+    "type": "compare",
+    "attribute": "item.seenFortuneTags",
+    "operator": "CONTAINS",
+    "value": "love"
+  }
+}
+```
+
+### 12. 결제 패턴 — 이번 달 3회 이상 결제
+
+```json
+{
+  "id": 12, "version": 1,
+  "root": {
+    "type": "compare",
+    "attribute": "action.monthChargeCount",
+    "operator": "GTE",
+    "value": 3
+  }
+}
+```
+
+### 13. 생일 사용자 + 푸시 허용
+
+```json
+{
+  "id": 13, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "post.isBirthdayToday",       "operator": "EQ", "value": true },
+      { "type": "compare", "attribute": "device.appPushPermission",   "operator": "EQ", "value": true }
+    ]
+  },
+  "meta": { "label": "생일자 푸시 캠페인" }
+}
+```
+
+### 14. 프리미엄 사용자 — 운명의 책 보유 + 30일 내 프리미엄 구매
+
+```json
+{
+  "id": 14, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "premium.fatebookCount",  "operator": "GTE", "value": 1 },
+      { "type": "compare", "attribute": "action.hasPremiumIn30Days", "operator": "EQ", "value": true }
+    ]
+  }
+}
+```
+
+### 15. 복합 자격 판정 — 친구 5명 이상, 미사용 선물 보유, 이번 달 미결제
+
+```json
+{
+  "id": 15, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "friendship.total",      "operator": "GTE", "value": 5 },
+      { "type": "compare", "attribute": "gift.hasUnusedGift",    "operator": "EQ",  "value": true },
+      { "type": "compare", "attribute": "action.monthChargeCount", "operator": "EQ",  "value": 0 }
+    ]
+  },
+  "meta": { "label": "친구활동 + 선물보유 + 미결제 (선물 사용 유도)" }
+}
+```
+
+### 16. 시간 범위 — 평일 점심시간 (월~금, 11-14시)
+
+```json
+{
+  "id": 16, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "now.dayOfWeek", "operator": "BETWEEN", "value": [1, 5] },
+      { "type": "compare", "attribute": "now.kstHour",   "operator": "BETWEEN", "value": [11, 14] }
+    ]
+  }
+}
+```
+
+### 17. 별자리 + 띠 매칭 — 특정 운세 콘텐츠 타겟팅
+
+```json
+{
+  "id": 17, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "user.zodiac", "operator": "IN", "value": [0, 1, 2] },
+      { "type": "compare", "attribute": "user.animal", "operator": "EQ", "value": 0 }
+    ]
+  },
+  "meta": { "label": "양자리/황소자리/쌍둥이자리 + 쥐띠" }
+}
+```
+
+### 18. 충전 후 결제 유도 — 보유 포스가 적은 결제 경험자
+
+```json
+{
+  "id": 18, "version": 1,
+  "root": {
+    "type": "and",
+    "children": [
+      { "type": "compare", "attribute": "force.total",         "operator": "LTE", "value": 100 },
+      { "type": "compare", "attribute": "action.hasCharged",   "operator": "EQ",  "value": true },
+      { "type": "compare", "attribute": "action.daysAfterLastCharge", "operator": "GTE", "value": 7 }
+    ]
+  }
+}
+```
+
+---
+
+### 작성 팁
+
+1. **`id` 필드**: Rule의 고유 ID(양의 Long). 어드민에서 자동 채번 권장.
+2. **`version`**: 룰 변경 시 증가. 같은 id가 진화한 흔적.
+3. **노드의 `id` (Compare 안)**: 옵션이지만 trace 디버깅 시 큰 도움. `c1`, `c2`처럼 의미있는 식별자 부여.
+4. **`meta`**: 평가에 영향 없는 부가 정보. 어드민 라벨/설명/작성자 등을 담기 좋음.
+5. **빈 `and`/`or`**: `and: []` → 항상 true, `or: []` → 항상 false. 의도치 않은 빈 배열 주의.
+6. **타입 일치**: `value`의 JSON 타입이 attribute spec과 일치해야 함. 예: INTEGER 속성에 문자열 비교는 실패.
+7. **`BETWEEN`은 양 끝 포함**: `[20, 39]` → 20, 39 모두 매칭.
+8. **테스트**: 어드민에 등록 전 `/api/internal/targeting/simulate` 엔드포인트로 시뮬레이션 권장.
 
 ---
 
