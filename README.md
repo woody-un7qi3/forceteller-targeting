@@ -200,16 +200,20 @@ if (result.matched()) { ... }
 
 ### 연산자 표
 
-| 연산자 | 의미 | 적용 타입 | value 형태 |
-|---|---|---|---|
-| `EQ` | 같음 | 모든 타입 | 스칼라 |
-| `NEQ` | 다름 | 모든 타입 | 스칼라 |
-| `GT` / `GTE` | 초과 / 이상 | INTEGER, INSTANT | 스칼라 |
-| `LT` / `LTE` | 미만 / 이하 | INTEGER, INSTANT | 스칼라 |
-| `BETWEEN` | 범위 (양 끝 포함) | INTEGER, INSTANT | `[min, max]` 배열 |
-| `IN` | 목록에 포함 | STRING, INTEGER | 배열 |
-| `NOT_IN` | 목록에 미포함 | STRING, INTEGER | 배열 |
-| `CONTAINS` | 리스트 속성이 값을 포함 | LIST_STRING | 스칼라 |
+`value` 형태:
+- **단일 값**: 문자열/숫자/불리언 한 개. 예: `"F"`, `30`, `true`
+- **값 목록 (배열)**: 여러 값을 `[...]`로 묶음. 예: `[20, 39]`, `["android", "ios"]`
+
+| 연산자 | 의미 | 적용 타입 | value 형태 | 예시 |
+|---|---|---|---|---|
+| `EQ` | 같음 | 모든 타입 | 단일 값 | `"F"` / `30` / `true` |
+| `NEQ` | 다름 | 모든 타입 | 단일 값 | `"M"` |
+| `GT` / `GTE` | 초과 / 이상 | INTEGER, INSTANT | 단일 값 | `30` |
+| `LT` / `LTE` | 미만 / 이하 | INTEGER, INSTANT | 단일 값 | `100` |
+| `BETWEEN` | 범위 (양 끝 포함) | INTEGER, INSTANT | 2개 원소 배열 `[min, max]` | `[20, 39]` |
+| `IN` | 목록에 포함 | STRING, INTEGER | 값 목록 | `["android", "ios"]` |
+| `NOT_IN` | 목록에 미포함 | STRING, INTEGER | 값 목록 | `[101, 102]` |
+| `CONTAINS` | 리스트 속성이 값을 포함 | LIST_STRING | 단일 값 | `"love"` |
 
 ---
 
