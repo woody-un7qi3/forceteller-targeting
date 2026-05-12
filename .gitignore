@@ -1,0 +1,17 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+out/
+bin/
+
+.vscode/
+.DS_Store
+
+local.properties
