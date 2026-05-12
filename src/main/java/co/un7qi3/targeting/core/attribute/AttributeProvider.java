@@ -21,7 +21,7 @@ public interface AttributeProvider<S> {
 
     /**
      * 자기가 다루는 속성 spec 목록.
-     * AttributeCatalog가 시작 시 호출해 카탈로그를 구성한다.
+     * AttributeRegistry가 시작 시 호출해 레지스트리를 구성한다.
      */
     List<AttributeSpec> declare();
 

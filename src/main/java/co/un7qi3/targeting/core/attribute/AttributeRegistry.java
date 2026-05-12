@@ -8,28 +8,28 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 모든 AttributeProvider가 선언한 spec을 한 곳에 모은 메모리 카탈로그.
+ * 모든 {@link AttributeProvider}가 선언한 spec을 모아둔 메모리 레지스트리.
  *
- * <p>호스트 부팅 시 Provider들을 넘겨 빌드하고, 이후 검증/노출에 사용한다.
+ * <p>호스트 부팅 시 Provider들을 넘겨 빌드하고, 이후 검증/노출/조회에 사용한다.
  */
-public final class AttributeCatalog {
+public final class AttributeRegistry {
 
     private final Map<String, AttributeSpec> bySpec;
 
-    private AttributeCatalog(Map<String, AttributeSpec> bySpec) {
+    private AttributeRegistry(Map<String, AttributeSpec> bySpec) {
         this.bySpec = Collections.unmodifiableMap(bySpec);
     }
 
     /**
-     * Provider 목록으로부터 카탈로그를 빌드한다.
+     * Provider 목록으로부터 레지스트리를 빌드한다.
      *
      * <p>검증:
      * <ul>
      *   <li>모든 spec의 key는 Provider의 namespace prefix로 시작해야 한다 (예: namespace="user" → "user.*")</li>
-     *   <li>전체 카탈로그 내 key 중복은 허용되지 않는다</li>
+     *   <li>전체 레지스트리 내 key 중복은 허용되지 않는다</li>
      * </ul>
      */
-    public static AttributeCatalog of(List<? extends AttributeProvider<?>> providers) {
+    public static AttributeRegistry of(List<? extends AttributeProvider<?>> providers) {
         var bySpec = new LinkedHashMap<String, AttributeSpec>();
         for (AttributeProvider<?> p : providers) {
             String ns = p.namespace();
@@ -50,7 +50,7 @@ public final class AttributeCatalog {
                 }
             }
         }
-        return new AttributeCatalog(bySpec);
+        return new AttributeRegistry(bySpec);
     }
 
     public Optional<AttributeSpec> find(String key) {

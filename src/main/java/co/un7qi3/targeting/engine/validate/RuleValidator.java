@@ -1,6 +1,6 @@
 package co.un7qi3.targeting.engine.validate;
 
-import co.un7qi3.targeting.core.attribute.AttributeCatalog;
+import co.un7qi3.targeting.core.attribute.AttributeRegistry;
 import co.un7qi3.targeting.core.attribute.AttributeSpec;
 import co.un7qi3.targeting.core.attribute.AttributeStatus;
 import co.un7qi3.targeting.core.error.RuleValidationException;
@@ -15,7 +15,7 @@ import java.util.Set;
 /**
  * 룰 저장/활성화 전 검증.
  * <ul>
- *   <li>Compare 노드의 attribute가 카탈로그에 있는지</li>
+ *   <li>Compare 노드의 attribute가 레지스트리에 있는지</li>
  *   <li>Compare 노드의 op가 spec.allowedOps에 속하는지</li>
  *   <li>노드 id가 트리 내에서 유일한지</li>
  *   <li>트리 깊이가 제한을 넘지 않는지</li>
@@ -26,15 +26,15 @@ public final class RuleValidator {
 
     public static final int DEFAULT_MAX_DEPTH = 10;
 
-    private final AttributeCatalog catalog;
+    private final AttributeRegistry registry;
     private final int maxDepth;
 
-    public RuleValidator(AttributeCatalog catalog) {
-        this(catalog, DEFAULT_MAX_DEPTH);
+    public RuleValidator(AttributeRegistry registry) {
+        this(registry, DEFAULT_MAX_DEPTH);
     }
 
-    public RuleValidator(AttributeCatalog catalog, int maxDepth) {
-        this.catalog = catalog;
+    public RuleValidator(AttributeRegistry registry, int maxDepth) {
+        this.registry = registry;
         this.maxDepth = maxDepth;
     }
 
@@ -74,7 +74,7 @@ public final class RuleValidator {
     }
 
     private void validateCompare(RuleNode.Compare cmp, List<String> errors, List<String> warnings) {
-        var spec = catalog.find(cmp.attribute()).orElse(null);
+        var spec = registry.find(cmp.attribute()).orElse(null);
         if (spec == null) {
             errors.add("unknown attribute: " + cmp.attribute() + " (node " + cmp.id() + ")");
             return;

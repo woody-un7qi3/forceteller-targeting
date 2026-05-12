@@ -109,7 +109,7 @@ public class UserAttributeProvider implements AttributeProvider<User> {
 }
 ```
 
-라이브러리는 Provider들을 모아 `AttributeCatalog`를 구성하고, 평가 시 필요한 Provider만 호출.
+라이브러리는 Provider들을 모아 `AttributeRegistry`를 구성하고, 평가 시 필요한 Provider만 호출.
 
 ### `Targeting` (Facade)
 
@@ -119,7 +119,7 @@ public class UserAttributeProvider implements AttributeProvider<User> {
 Targeting.defaultEvaluator()                       // RuleEvaluator
 Targeting.jsonMapper()                             // RuleJsonMapper
 Targeting.jacksonModule()                          // Jackson Module
-Targeting.catalog(providers)                       // AttributeCatalog
+Targeting.registry(providers)                      // AttributeRegistry
 Targeting.assembler(providers, idExtractor)        // InputAssembler<S>
 Targeting.resolver(assembler, evaluator)           // TargetingResolver<S>
 ```
@@ -165,8 +165,8 @@ public class TargetingConfig {
     @Bean public RuleJsonMapper jsonMapper()      { return Targeting.jsonMapper(); }
     @Bean public Module jacksonModule()           { return Targeting.jacksonModule(); }
 
-    @Bean public AttributeCatalog catalog(List<AttributeProvider<User>> ps) {
-        return Targeting.catalog(ps);
+    @Bean public AttributeRegistry registry(List<AttributeProvider<User>> ps) {
+        return Targeting.registry(ps);
     }
     @Bean public InputAssembler<User> assembler(List<AttributeProvider<User>> ps) {
         return Targeting.assembler(ps, u -> String.valueOf(u.getId()));
@@ -212,7 +212,7 @@ if (result.matched()) { ... }
 ```
 co.un7qi3.targeting/
 ├── core/
-│   ├── attribute/    AttributeSpec, Type, Status, Provider, Catalog, Bag
+│   ├── attribute/    AttributeSpec, Type, Status, Provider, Registry, Bag
 │   ├── evaluation/   EvaluationInput, MapEvaluationInput
 │   ├── rule/         Rule, RuleNode(And/Or/Not/Compare), Operator, RuleNodes
 │   ├── evaluator/    RuleEvaluator, EvaluationResult, TraceEntry

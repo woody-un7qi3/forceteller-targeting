@@ -9,7 +9,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class AttributeCatalogTest {
+class AttributeRegistryTest {
 
     static class FakeProvider implements AttributeProvider<Object> {
         private final String namespace;
@@ -22,7 +22,7 @@ class AttributeCatalogTest {
 
         @Override public String namespace() { return namespace; }
         @Override public List<AttributeSpec> declare() { return specs; }
-        @Override public void fill(Object subject, AttributeBag bag, java.util.Set<String> neededKeys) { }
+        @Override public void fill(Object target, AttributeBag bag, java.util.Set<String> neededKeys) { }
     }
 
     private static AttributeSpec spec(String key, AttributeType type, Operator... ops) {
@@ -30,7 +30,7 @@ class AttributeCatalogTest {
     }
 
     @Test
-    void builds_catalog_from_providers() {
+    void builds_registry_from_providers() {
         var p1 = new FakeProvider("user", List.of(
             spec("user.age", AttributeType.INTEGER, Operator.GTE, Operator.LTE),
             spec("user.gender", AttributeType.STRING, Operator.EQ, Operator.IN)
@@ -39,18 +39,18 @@ class AttributeCatalogTest {
             spec("force.total", AttributeType.INTEGER, Operator.GTE)
         ));
 
-        var catalog = AttributeCatalog.of(List.of(p1, p2));
+        var registry = AttributeRegistry.of(List.of(p1, p2));
 
-        assertThat(catalog.size()).isEqualTo(3);
-        assertThat(catalog.find("user.age")).isPresent();
-        assertThat(catalog.find("force.total")).isPresent();
-        assertThat(catalog.find("absent")).isEmpty();
+        assertThat(registry.size()).isEqualTo(3);
+        assertThat(registry.find("user.age")).isPresent();
+        assertThat(registry.find("force.total")).isPresent();
+        assertThat(registry.find("absent")).isEmpty();
     }
 
     @Test
     void require_throws_for_unknown_key() {
-        var catalog = AttributeCatalog.of(List.of());
-        assertThatThrownBy(() -> catalog.require("nope"))
+        var registry = AttributeRegistry.of(List.of());
+        assertThatThrownBy(() -> registry.require("nope"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Unknown attribute");
     }
@@ -60,7 +60,7 @@ class AttributeCatalogTest {
         var bad = new FakeProvider("user", List.of(
             spec("device.platform", AttributeType.STRING, Operator.EQ)   // user.* 가 아님
         ));
-        assertThatThrownBy(() -> AttributeCatalog.of(List.of(bad)))
+        assertThatThrownBy(() -> AttributeRegistry.of(List.of(bad)))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("outside its namespace");
     }
@@ -70,7 +70,7 @@ class AttributeCatalogTest {
         var p1 = new FakeProvider("user", List.of(spec("user.age", AttributeType.INTEGER, Operator.GTE)));
         var p2 = new FakeProvider("user", List.of(spec("user.age", AttributeType.INTEGER, Operator.EQ)));
 
-        assertThatThrownBy(() -> AttributeCatalog.of(List.of(p1, p2)))
+        assertThatThrownBy(() -> AttributeRegistry.of(List.of(p1, p2)))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Duplicate");
     }
@@ -78,14 +78,14 @@ class AttributeCatalogTest {
     @Test
     void rejects_blank_namespace() {
         var p = new FakeProvider("", List.of());
-        assertThatThrownBy(() -> AttributeCatalog.of(List.of(p)))
+        assertThatThrownBy(() -> AttributeRegistry.of(List.of(p)))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void all_returns_unmodifiable() {
-        var catalog = AttributeCatalog.of(List.of());
-        assertThatThrownBy(() -> catalog.all().add(null))
+        var registry = AttributeRegistry.of(List.of());
+        assertThatThrownBy(() -> registry.all().add(null))
             .isInstanceOf(UnsupportedOperationException.class);
     }
 }

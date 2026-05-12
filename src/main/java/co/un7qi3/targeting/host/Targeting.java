@@ -1,6 +1,6 @@
 package co.un7qi3.targeting.host;
 
-import co.un7qi3.targeting.core.attribute.AttributeCatalog;
+import co.un7qi3.targeting.core.attribute.AttributeRegistry;
 import co.un7qi3.targeting.core.attribute.AttributeProvider;
 import co.un7qi3.targeting.core.evaluator.RuleEvaluator;
 import co.un7qi3.targeting.engine.serde.RuleJsonMapper;
@@ -25,8 +25,8 @@ import java.util.function.Function;
  *     @Bean public RuleJsonMapper jsonMapper()      { return Targeting.jsonMapper(); }
  *     @Bean public Module jacksonModule()           { return Targeting.jacksonModule(); }
  *
- *     @Bean public AttributeCatalog catalog(List<AttributeProvider<User>> ps) {
- *         return Targeting.catalog(ps);
+ *     @Bean public AttributeRegistry registry(List<AttributeProvider<User>> ps) {
+ *         return Targeting.registry(ps);
  *     }
  *     @Bean public InputAssembler<User> assembler(List<AttributeProvider<User>> ps) {
  *         return Targeting.assembler(ps, u -> String.valueOf(u.getId()));
@@ -64,10 +64,10 @@ public final class Targeting {
     }
 
     /**
-     * Provider 목록으로 카탈로그를 만든다. 부팅 시 1회 호출.
+     * Provider 목록으로 레지스트리를 만든다. 부팅 시 1회 호출.
      */
-    public static <S> AttributeCatalog catalog(List<AttributeProvider<S>> providers) {
-        return AttributeCatalog.of(providers);
+    public static <S> AttributeRegistry registry(List<AttributeProvider<S>> providers) {
+        return AttributeRegistry.of(providers);
     }
 
     /**

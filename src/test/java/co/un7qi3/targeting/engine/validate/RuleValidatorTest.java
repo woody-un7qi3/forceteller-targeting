@@ -1,6 +1,6 @@
 package co.un7qi3.targeting.engine.validate;
 
-import co.un7qi3.targeting.core.attribute.AttributeCatalog;
+import co.un7qi3.targeting.core.attribute.AttributeRegistry;
 import co.un7qi3.targeting.core.attribute.AttributeProvider;
 import co.un7qi3.targeting.core.attribute.AttributeSpec;
 import co.un7qi3.targeting.core.attribute.AttributeStatus;
@@ -33,7 +33,7 @@ class RuleValidatorTest {
         return new AttributeSpec(key, type, EnumSet.copyOf(List.of(ops)), null, null, status);
     }
 
-    private final AttributeCatalog catalog = AttributeCatalog.of(List.of(
+    private final AttributeRegistry registry = AttributeRegistry.of(List.of(
         new FakeProvider("user", List.of(
             spec("user.age", AttributeType.INTEGER, AttributeStatus.ACTIVE, Operator.GTE, Operator.LTE, Operator.BETWEEN),
             spec("user.gender", AttributeType.STRING, AttributeStatus.ACTIVE, Operator.EQ, Operator.IN),
@@ -41,7 +41,7 @@ class RuleValidatorTest {
         ))
     ));
 
-    private final RuleValidator validator = new RuleValidator(catalog);
+    private final RuleValidator validator = new RuleValidator(registry);
 
     private Rule rule(RuleNode root) {
         return new Rule(1L, 1, root, null);
@@ -102,7 +102,7 @@ class RuleValidatorTest {
                 ))
             ))
         ));
-        var shallow = new RuleValidator(catalog, 2);
+        var shallow = new RuleValidator(registry, 2);
         assertThatThrownBy(() -> shallow.validate(rule(deep)))
             .isInstanceOf(RuleValidationException.class)
             .hasMessageContaining("max depth");
