@@ -185,6 +185,85 @@ if (result.matched()) { ... }
 
 ---
 
+## 어드민용 내부 API
+
+### `GET /api/internal/targeting/attributes` — 속성 레지스트리 조회
+
+부팅 시점에 모든 Provider가 declare한 spec 목록을 조회. 어드민은 시작 시 1회 + 주기적 새로고침으로 캐시 권장.
+
+#### 요청
+```bash
+curl http://localhost:8080/api/internal/targeting/attributes
+```
+
+#### 응답 (예시 일부)
+```json
+[
+  {
+    "key": "user.gender",
+    "type": "STRING",
+    "allowedOps": ["EQ", "NEQ", "IN", "NOT_IN"],
+    "label": "성별 (M/F)",
+    "description": null,
+    "status": "ACTIVE"
+  },
+  {
+    "key": "user.age",
+    "type": "INTEGER",
+    "allowedOps": ["EQ", "NEQ", "GT", "GTE", "LT", "LTE", "BETWEEN"],
+    "label": "만 나이",
+    "description": null,
+    "status": "ACTIVE"
+  },
+  {
+    "key": "device.platform",
+    "type": "STRING",
+    "allowedOps": ["EQ", "NEQ", "IN", "NOT_IN"],
+    "label": "플랫폼",
+    "description": "android / ios / web",
+    "status": "ACTIVE"
+  },
+  {
+    "key": "device.appVersionInt",
+    "type": "INTEGER",
+    "allowedOps": ["EQ", "NEQ", "GT", "GTE", "LT", "LTE", "BETWEEN"],
+    "label": "앱 버전(비교용 정수)",
+    "description": "(major<<16)+(minor<<8)+patch",
+    "status": "ACTIVE"
+  },
+  {
+    "key": "now.kstHour",
+    "type": "INTEGER",
+    "allowedOps": ["EQ", "NEQ", "GT", "GTE", "LT", "LTE", "BETWEEN"],
+    "label": "현재 시각(KST, 시)",
+    "description": "0~23",
+    "status": "ACTIVE"
+  }
+]
+```
+
+#### 응답 필드
+
+| 필드 | 의미 |
+|---|---|
+| `key` | 룰 JSON의 `attribute` 자리에 들어갈 키 |
+| `type` | 값 타입 (`STRING` / `INTEGER` / `BOOLEAN` / `INSTANT` / `LIST_STRING`) |
+| `allowedOps` | 이 키에 사용 가능한 연산자 목록 |
+| `label` | 어드민 UI 표시용 한국어 라벨 |
+| `description` | 추가 설명 (값 범위, 단위 등) |
+| `status` | `ACTIVE` 또는 `DEPRECATED` (DEPRECATED는 신규 룰에 사용 자제) |
+
+#### 어드민 활용 패턴
+
+1. 페이지 진입 시 이 API 호출해 캐시
+2. 룰 편집 UI에서:
+   - "속성 선택" 드롭다운 = `key`+`label` 목록
+   - 선택된 키에 따라 "연산자" 드롭다운 = `allowedOps`로 제한
+   - 선택된 연산자에 따라 "value" 입력 형태 결정 (단일/배열, type별 입력기)
+3. `DEPRECATED` 상태인 키는 어드민에서 회색 처리 또는 숨김
+
+---
+
 ## JSON 룰 예시 모음
 
 어드민에서 룰 작성 시 참고용. 모든 예시는 `RuleJsonMapper.fromJson(json)` 으로 그대로 파싱됩니다.
