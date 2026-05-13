@@ -1,56 +1,45 @@
-plugins {
-    `java-library`
-    `maven-publish`
-}
+subprojects {
+    apply(plugin = "java-library")
+    apply(plugin = "maven-publish")
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+    extensions.configure<JavaPluginExtension> {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        }
+        withSourcesJar()
+        withJavadocJar()
     }
-    withSourcesJar()
-    withJavadocJar()
-}
 
-repositories {
-    mavenCentral()
-}
+    repositories {
+        mavenCentral()
+    }
 
-dependencies {
-    api(libs.jackson.databind)
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+    }
 
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.assertj.core)
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+        options.compilerArgs.addAll(listOf("-Xlint:all", "-parameters"))
+    }
 
-tasks.test {
-    useJUnitPlatform()
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.encoding = "UTF-8"
-    options.compilerArgs.addAll(listOf("-Xlint:all", "-parameters"))
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-
-            pom {
-                name.set("forceteller-targeting")
-                description.set("Forceteller targeting rule engine — domain-agnostic library")
-                url.set("https://github.com/un7qi3/forceteller-targeting")
+    extensions.configure<PublishingExtension> {
+        publications {
+            create<MavenPublication>("maven") {
+                from(components["java"])
+                pom {
+                    url.set("https://github.com/un7qi3/forceteller-targeting")
+                }
             }
         }
-    }
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/un7qi3/forceteller-targeting")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/un7qi3/forceteller-targeting")
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR")
+                    password = System.getenv("GITHUB_TOKEN")
+                }
             }
         }
     }
