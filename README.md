@@ -156,31 +156,70 @@ Rule rule    ──────────▶│   ↓                         
 라이브러리 도입 시 호스트가 작성해야 하는 코드는 **단 두 가지**:
 
 1. **Provider 구현체들** — 자기 도메인의 속성을 정의/채움
-2. **빈 등록 6개** (Spring 호스트 예시):
+2. **빈 등록** — Spring Boot 호스트는 starter 한 줄로 대부분 자동, 도메인 타입 빈 2개만 직접
+
+---
+
+### Spring Boot 호스트 (권장)
+
+`forceteller-targeting-spring-boot-starter` 의존성 한 줄 추가:
+
+```kotlin
+// build.gradle.kts
+implementation("co.un7qi3:forceteller-targeting-spring-boot-starter:0.2.0-SNAPSHOT")
+```
+
+starter가 다음 4개 빈을 자동 등록한다 (모두 `@ConditionalOnMissingBean` — 호스트가 같은 타입 빈을 선언하면 양보):
+
+| 빈 | 비고 |
+|---|---|
+| `RuleEvaluator` | `TreeRuleEvaluator` 기본 구현 |
+| `RuleJsonMapper` | Rule ↔ JSON 변환기 |
+| `Module targetingJacksonModule` | Spring MVC 전역 ObjectMapper에 자동 등록되어 `@RequestBody Rule` 역직렬화 지원 |
+| `AttributeRegistry` | 컨텍스트의 모든 `AttributeProvider` 빈을 자동 수집해 빌드 |
+
+호스트는 **도메인 타입에 묶인 2개 빈만 직접 선언**한다. `InputAssembler<S>`와 `TargetingResolver<S>`는 호스트의 평가 대상 타입 `<S>`(예: `User`)와 `idExtractor`(로깅용 식별자 추출 함수)가 필요해서 starter가 자동 등록할 수 없다.
 
 ```java
 @Configuration
 public class TargetingConfig {
-    @Bean public RuleEvaluator evaluator()        { return Targeting.defaultEvaluator(); }
-    @Bean public RuleJsonMapper jsonMapper()      { return Targeting.jsonMapper(); }
-    @Bean public Module jacksonModule()           { return Targeting.jacksonModule(); }
 
-    @Bean public AttributeRegistry registry(List<AttributeProvider<User>> ps) {
-        return Targeting.registry(ps);
+    @Bean
+    public InputAssembler<User> inputAssembler(List<AttributeProvider<User>> providers) {
+        return Targeting.assembler(providers, u -> String.valueOf(u.getId()));
     }
-    @Bean public InputAssembler<User> assembler(List<AttributeProvider<User>> ps) {
-        return Targeting.assembler(ps, u -> String.valueOf(u.getId()));
-    }
-    @Bean public TargetingResolver<User> resolver(InputAssembler<User> a, RuleEvaluator e) {
-        return Targeting.resolver(a, e);
+
+    @Bean
+    public TargetingResolver<User> targetingResolver(
+            InputAssembler<User> assembler, RuleEvaluator evaluator) {
+        return Targeting.resolver(assembler, evaluator);
     }
 }
 ```
 
+그리고 도메인별 `AttributeProvider<User>` 구현체에 `@Component`만 붙이면 starter가 자동으로 모아 `AttributeRegistry`를 만든다.
+
 평가 호출:
 ```java
+@Autowired TargetingResolver<User> targetingResolver;
+
 EvaluationResult result = targetingResolver.evaluate(rule, user);
 if (result.matched()) { ... }
+```
+
+---
+
+### 비-Spring 호스트 (또는 직접 조립)
+
+`forceteller-targeting-core` 의존성만 추가하고 손으로 6개 부품을 조립한다:
+
+```java
+RuleEvaluator evaluator           = Targeting.defaultEvaluator();
+RuleJsonMapper jsonMapper         = Targeting.jsonMapper();
+List<AttributeProvider<User>> ps  = List.of(new UserAttributeProvider(), /* ... */);
+AttributeRegistry registry        = Targeting.registry(ps);
+InputAssembler<User> assembler    = Targeting.assembler(ps, u -> String.valueOf(u.getId()));
+TargetingResolver<User> resolver  = Targeting.resolver(assembler, evaluator);
 ```
 
 ---
